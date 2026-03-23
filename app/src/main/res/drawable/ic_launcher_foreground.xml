@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ── SUN ── center (43, 40), radius 12 ── -->
+
+    <!-- Sun body -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M43,40 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" />
+
+    <!-- Sun rays: 8 directions, start 15dp from center, end 21dp from center -->
+
+    <!-- Top -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFD700"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M43,25 L43,19" />
+
+    <!-- Bottom (partially hidden by cloud) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFD700"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M43,55 L43,61" />
+
+    <!-- Left -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFD700"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M28,40 L22,40" />
+
+    <!-- Right -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFD700"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M58,40 L64,40" />
+
+    <!-- Top-left (45°) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFD700"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M32.4,29.4 L28.2,25.2" />
+
+    <!-- Top-right (45°) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFD700"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M53.6,29.4 L57.8,25.2" />
+
+    <!-- Bottom-left (45°) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFD700"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M32.4,50.6 L28.2,54.8" />
+
+    <!-- Bottom-right (45°) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFD700"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M53.6,50.6 L57.8,54.8" />
+
+    <!-- ── CLOUD ── drawn on top of sun so it peeks behind ── -->
+
+    <!-- Cloud shadow (subtle grey underside) -->
+    <path
+        android:fillColor="#CCCCCC"
+        android:fillAlpha="0.5"
+        android:pathData="M36,73 L76,73 C74,76 70,77 66,77 L46,77 C42,77 38,76 36,73 Z" />
+
+    <!-- Cloud body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M76,73
+                          C81,73 85,69 85,64
+                          C85,59 81,56 76,56
+                          C74,49 68,43 60,43
+                          C54,43 49,47 47,53
+                          C43,51 38,52 35,55
+                          C30,56 27,60 27,64
+                          C27,69 31,73 36,73 Z" />
+
+</vector>
