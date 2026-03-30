@@ -1,7 +1,7 @@
 MyWeather App
 A simple Android weather app that pulls its data from NOAA api.weather.gov. 
 Generated with Claude Code.
-Project opens and builds within Android Stidio.
+Project opens and builds within Android Studio.
 ---------------------------------------------------
 ![MyWeather-01-1 3](https://github.com/user-attachments/assets/929e310b-c760-45a4-a8a3-adb3838fa0cf)
 
