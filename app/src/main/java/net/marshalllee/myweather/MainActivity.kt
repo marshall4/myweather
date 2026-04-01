@@ -41,6 +41,7 @@ import androidx.core.content.edit
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +49,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.request.ImageRequest
 import net.marshalllee.myweather.ui.theme.MyWeatherTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -101,7 +104,8 @@ data class LocationConfig(
     val gridId: String,
     val gridX: Int,
     val gridY: Int,
-    val forecastZone: String
+    val forecastZone: String,
+    val radarStation: String = ""
 )
 
 // ── Location persistence ──────────────────────────────────────────────────────
@@ -114,6 +118,7 @@ private const val KEY_GRID_ID  = "grid_id"
 private const val KEY_GRID_X   = "grid_x"
 private const val KEY_GRID_Y   = "grid_y"
 private const val KEY_ZONE     = "forecast_zone"
+private const val KEY_RADAR    = "radar_station"
 
 private val DEFAULT_LOCATION = LocationConfig(
     displayName  = "Cold Springs, NV",
@@ -122,7 +127,8 @@ private val DEFAULT_LOCATION = LocationConfig(
     gridId       = "REV",
     gridX        = 41,
     gridY        = 114,
-    forecastZone = "NVZ003"
+    forecastZone = "NVZ003",
+    radarStation = "KRGX"
 )
 
 private fun loadLocation(prefs: SharedPreferences): LocationConfig = LocationConfig(
@@ -134,7 +140,8 @@ private fun loadLocation(prefs: SharedPreferences): LocationConfig = LocationCon
     gridId       = prefs.getString(KEY_GRID_ID, DEFAULT_LOCATION.gridId)!!,
     gridX        = prefs.getInt(KEY_GRID_X,     DEFAULT_LOCATION.gridX),
     gridY        = prefs.getInt(KEY_GRID_Y,     DEFAULT_LOCATION.gridY),
-    forecastZone = prefs.getString(KEY_ZONE,    DEFAULT_LOCATION.forecastZone)!!
+    forecastZone = prefs.getString(KEY_ZONE,    DEFAULT_LOCATION.forecastZone)!!,
+    radarStation = prefs.getString(KEY_RADAR,   DEFAULT_LOCATION.radarStation)!!
 )
 
 private fun saveLocation(prefs: SharedPreferences, config: LocationConfig) {
@@ -146,6 +153,7 @@ private fun saveLocation(prefs: SharedPreferences, config: LocationConfig) {
         putInt(KEY_GRID_X,     config.gridX)
         putInt(KEY_GRID_Y,     config.gridY)
         putString(KEY_ZONE,    config.forecastZone)
+        putString(KEY_RADAR,   config.radarStation)
     }
 }
 
@@ -293,14 +301,15 @@ fun MainScreen(modifier: Modifier = Modifier) {
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
             when (page) {
                 0 -> CurrentWeatherTab(
-                    current      = currentWeather,
-                    alerts       = alerts,
+                    current       = currentWeather,
+                    alerts        = alerts,
                     lastFetchedAt = lastFetchedAt,
-                    locationName = location.displayName,
-                    isLoading    = isLoading,
-                    error        = error,
-                    todayHigh    = forecast.firstOrNull { it.isDaytime }?.let { "${it.temperature}°${it.temperatureUnit}" },
-                    todayLow     = forecast.firstOrNull { !it.isDaytime }?.let { "${it.temperature}°${it.temperatureUnit}" }
+                    locationName  = location.displayName,
+                    isLoading     = isLoading,
+                    error         = error,
+                    todayHigh     = forecast.firstOrNull { it.isDaytime }?.let { "${it.temperature}°${it.temperatureUnit}" },
+                    todayLow      = forecast.firstOrNull { !it.isDaytime }?.let { "${it.temperature}°${it.temperatureUnit}" },
+                    radarStation  = location.radarStation
                 )
                 1 -> ForecastTab(forecast, location.displayName, isLoading, error)
                 3 -> AboutTab()
@@ -329,7 +338,8 @@ fun CurrentWeatherTab(
     isLoading: Boolean,
     error: String?,
     todayHigh: String?,
-    todayLow: String?
+    todayLow: String?,
+    radarStation: String = ""
 ) {
     if (isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -423,6 +433,31 @@ fun CurrentWeatherTab(
             if (alerts.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 alerts.forEach { AlertCard(it) }
+            }
+
+            if (radarStation.isNotBlank()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text       = "Precipitation Radar",
+                        fontWeight = FontWeight.Bold,
+                        fontSize   = 15.sp
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                val context = LocalContext.current
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data("https://radar.weather.gov/ridge/standard/${radarStation}_loop.gif")
+                        .decoderFactory(GifDecoder.Factory())
+                        .build(),
+                    contentDescription = "Precipitation radar loop for $radarStation",
+                    contentScale       = ContentScale.FillWidth,
+                    modifier           = Modifier.fillMaxWidth()
+                )
             }
         }
 
@@ -1061,13 +1096,14 @@ fun lookupGridpoint(lat: Double, lon: Double): LocationConfig {
     val response = conn.inputStream.bufferedReader().readText().also { conn.disconnect() }
     val props    = JSONObject(response).getJSONObject("properties")
 
-    val gridId  = props.getString("gridId")
-    val gridX   = props.getInt("gridX")
-    val gridY   = props.getInt("gridY")
-    val zone    = props.getString("forecastZone").substringAfterLast("/")
-    val relLoc  = props.getJSONObject("relativeLocation").getJSONObject("properties")
-    val city    = relLoc.getString("city")
-    val state   = relLoc.getString("state")
+    val gridId       = props.getString("gridId")
+    val gridX        = props.getInt("gridX")
+    val gridY        = props.getInt("gridY")
+    val zone         = props.getString("forecastZone").substringAfterLast("/")
+    val radarStation = props.optString("radarStation", "")
+    val relLoc       = props.getJSONObject("relativeLocation").getJSONObject("properties")
+    val city         = relLoc.getString("city")
+    val state        = relLoc.getString("state")
 
     return LocationConfig(
         displayName  = "$city, $state",
@@ -1076,7 +1112,8 @@ fun lookupGridpoint(lat: Double, lon: Double): LocationConfig {
         gridId       = gridId,
         gridX        = gridX,
         gridY        = gridY,
-        forecastZone = zone
+        forecastZone = zone,
+        radarStation = radarStation
     )
 }
 
