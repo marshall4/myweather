@@ -24,6 +24,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +44,9 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import coil.request.CachePolicy
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -358,11 +363,16 @@ fun CurrentWeatherTab(
         return
     }
 
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+    var radarRefreshKey by remember { mutableIntStateOf(0) }
+    var radarSectionOffsetY by remember { mutableIntStateOf(0) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top)
@@ -440,12 +450,33 @@ fun CurrentWeatherTab(
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coords ->
+                            radarSectionOffsetY = coords.positionInParent().y.toInt()
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text       = "Precipitation Radar",
                         fontWeight = FontWeight.Bold,
                         fontSize   = 15.sp
                     )
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(
+                        onClick = {
+                            radarRefreshKey++
+                            coroutineScope.launch {
+                                scrollState.animateScrollTo(radarSectionOffsetY)
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Filled.Refresh,
+                            contentDescription = "Refresh radar"
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 val context = LocalContext.current
@@ -453,6 +484,10 @@ fun CurrentWeatherTab(
                     model = ImageRequest.Builder(context)
                         .data("https://radar.weather.gov/ridge/standard/${radarStation}_loop.gif")
                         .decoderFactory(GifDecoder.Factory())
+                        .memoryCacheKey("radar_${radarStation}_$radarRefreshKey")
+                        .diskCacheKey("radar_${radarStation}_$radarRefreshKey")
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
                         .build(),
                     contentDescription = "Precipitation radar loop for $radarStation",
                     contentScale       = ContentScale.FillWidth,
